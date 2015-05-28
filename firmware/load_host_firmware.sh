@@ -13,10 +13,10 @@ COMM_PORT=/dev/ttyUSB0
 COMM_RATE=115200
 
 
-HOST_LOADER_PATH=~/workspace/Projects/GNU-BIO-0001/source/gnubio/firmware/mega2560/gnubio_host_loader/obj
+HOST_LOADER_PATH=~/dalderson/pusher/firmware/mega2560/gnubio_host_loader/obj
 HOST_LOADER_NAME=$HOST_LOADER_PATH/gnubio_host_loader.cpp.hex
 
-ARDUINO_HOME=~/arduino-1.0.6
+ARDUINO_HOME=~/bin/arduino-1.0.6
 ARDUINO_TOOLS=$ARDUINO_HOME/hardware/tools
 
 
