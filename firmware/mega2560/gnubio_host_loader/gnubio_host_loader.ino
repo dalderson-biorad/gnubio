@@ -867,8 +867,8 @@ boolean requestRecordWrite(unsigned char deviceAddress, unsigned int flashAddres
       /* delay(50); */
 
       /* Read back the response */
-      for(retries = 0; retries < 100; retries++) { 
-        delay(10);
+      for(retries = 0; retries < 20; retries++) { 
+        delay(50);
         if(true == readSTK500V2Response(deviceAddress, response_buffer,PROG_FLASH_RESP_SIZE)) {
           /* Check the pass fail response */
           if(response_buffer[5] == CMD_PROGRAM_FLASH_ISP && response_buffer[6] == STATUS_CMD_OK) {
