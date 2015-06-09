@@ -1,0 +1,2 @@
+/usr/share/arduino/hardware/tools/avrdude -C/usr/share/arduino/hardware/tools/avrdude.conf -v -v -v -v -patmega328p -cstk500v2 -Pusb -e -Ulock:w:0x3F:m -Uefuse:w:0xfc:m -Uhfuse:w:0xd8:m -Ulfuse:w:0xff:m 
+

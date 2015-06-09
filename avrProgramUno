@@ -1,0 +1,1 @@
+avrdude -p m328p -c avrispmkII -P usb -U ./.build/uno/firmware.hex
