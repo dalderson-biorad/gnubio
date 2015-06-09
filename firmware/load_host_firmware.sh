@@ -9,7 +9,7 @@
 
 
 ATMEL_PART=atmega2560
-COMM_PORT=/dev/ttyUSB0
+COMM_PORT=/dev/ttyS0
 COMM_RATE=115200
 
 
@@ -20,6 +20,7 @@ ARDUINO_HOME=~/bin/arduino-1.0.6
 ARDUINO_TOOLS=$ARDUINO_HOME/hardware/tools
 
 
-$ARDUINO_TOOLS/avrdude -C $ARDUINO_TOOLS/avrdude.conf -v -v -v -p $ATMEL_PART -c wiring -P $COMM_PORT -b $COMM_RATE -D -U flash:w:$HOST_LOADER_NAME:i
+#$ARDUINO_TOOLS/avrdude -C $ARDUINO_TOOLS/avrdude.conf -v -v -v -p $ATMEL_PART -c wiring -P $COMM_PORT -b $COMM_RATE -D -U flash:w:$HOST_LOADER_NAME:i
+avrdude -C avrdude.conf -v -v -v -p $ATMEL_PART -c wiring -P $COMM_PORT -b $COMM_RATE -D -U flash:w:$HOST_LOADER_NAME:i
 
 
