@@ -1,19 +1,20 @@
-python2 gbihexup/src/gbihexup.py --v --port=/dev/ttyS0 --baud=115200 --target=4 --file=images/slave3.hex
+# TODO: File headers!
+
+import abc # For abstract classes
+
+
+
+#python2 gbihexup/src/gbihexup.py --v --port=/dev/ttyS0 --baud=115200 --target=4 --file=images/slave3.hex
+#avrdude -C avrdude.conf -v -v -v -p $ATMEL_PART -c wiring -P $COMM_PORT -b $COMM_RATE -D -U flash:w:$HOST_RUNTIME_NAME:i
 ./firmware/load_host_firmware.sh
 ./firmware/load_host_runtime.sh
 
 
-FIRMWARE = "./firmware"
-MASTER_PUSHER  = FIRMWARE + "load_master.sh"
+MASTER_LOADER_SCRIPT  = "./firmware/load_master.sh"
+AVRDUDE = "avrdude -p atmega2560 -c wiring -b 115200"
+AVRDUDE_PORT  = "-P %s"
+AVRDUDE_IMAGE = "-D -U flash:w:%s:i"
 SLAVE_PUSHER = "python2 gbihexup/src/gbihexup.py --baud=115200" 
-
-
-
-master_images = { "mainboard" : "InoArduinoMaster.hex",
-                  "pusher"    : "FirmwarePusher.hex",
-                # TODO: PressureMaster can go in here eventually
-                }
-
 
 
 class FirmwarePusherException(Exception):
@@ -22,7 +23,8 @@ class FirmwarePusherException(Exception):
 
 
 class FirmwarePusher(object):
-    """A class for pushing firmware over I2C through a master"""
+    """An abstract class for pushing firmware over I2C through a master"""
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, port="/dev/ttys0"):
         """
@@ -53,10 +55,10 @@ class FirmwarePusher(object):
         @param image_name - filename of the image to push
         @raise FirmwarePusherException - if master push fails
         """
-        image_arg = "-i %s" % image_name
-        port_arg  = "-p %s" % self._port
+        image_arg = AVRDUDE_IMAGE % image_name
+        port_arg  = AVRDUDE_PORT % self._port
         args = " %s %s" % (image_arg, port_arg)
-        call = MASTER_PUSHER + args
+        call = AVRDUDE + args
         FirmwarePusher._run_subprocess(call) # can raise
 
 
@@ -78,59 +80,41 @@ class FirmwarePusher(object):
         FirmwarePusher._run_subprocess(call) # can raise
 
 
-
-class MainboardPusher(FirmwarePusher):
-    """Class for pusing firmware on the instrument mainboard."""
-
-    def __init__(self, port):
-        """
-        Initializer.
-        @param port - serial port connected to arduino master
-        """
-        super(MainboardPusher, self).__init__(port)
-
-
-    # TODO: Can this be pushed a class below?
     def set_master_as_pusher(self):
         """
         Sets master to be able to push firmware to slaves over I2C.
         @raise FirmwarePusherException - if setting master fails
         """
-        self._push_master("./images/FirmwarePusher.hex") # can raise
+        self._push_master_image("./images/FirmwarePusher.hex") # can raise
         self._master_can_push = True
 
 
-    # TODO: Make this an abstract class in the class below
+    @abc.abstractmethod
+    def _push_master_runtime(self):
+        """
+        Runtime image depends on board type so this must be implemented in children
+        @raise NotImplementedError - needs to implemented by children
+        """
+        raise NotImplementedError
+
+
     def set_master_as_runtime(self):
         """
         Sets master to use its runtime image.
         @raise FirmwarePusherException - if setting master fails
         """
-        self._push_master("./images/InoArduinoMaster.hex") # can raise
+        self._push_master_runtime() # can raise
         self._master_can_push = False
 
 
-    def push_mainboard_slave_1(self):
-        """
-        Sets master to use its runtime image.
-        @raise FirmwarePusherException - if slave firmware can not be pushed
-        """
-        self._push_slave_image("./images/InoArduinSlave1", 2) # can raise
 
 
-    def push_mainboard_slave_2(self):
-        """
-        Sets master to use its runtime image.
-        @raise FirmwarePusherException - if slave firmware can not be pushed
-        """
-        self._push_slave_image("./images/InoArduinSlave2", 3) # can raise
 
-
-    def push_mainboard_slave_3(self):
-        """
-        Sets master to use its runtime image.
-        @raise FirmwarePusherException - if slave firmware can not be pushed
-        """
-        self._push_slave_image("./images/InoArduinSlave3", 4) # can raise
-
-
+class PressurePusher(FirmwarePusher):
+    """Class for pushing firmware onto the pressure board."""
+    # TODO: work this out after August 2015 deadline
+    
+    def __init__(self):
+        """Initializer for an INCOMPLETE CLASS"""
+        # TODO: This isn't done yet!
+        raise NotImplementedError
