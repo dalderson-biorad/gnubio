@@ -1,14 +1,13 @@
 # TODO: File headers!
 
+
 import abc # For abstract classes
-
-
+import os
+import subprocess
+import threading
 
 #python2 gbihexup/src/gbihexup.py --v --port=/dev/ttyS0 --baud=115200 --target=4 --file=images/slave3.hex
 #avrdude -C avrdude.conf -v -v -v -p $ATMEL_PART -c wiring -P $COMM_PORT -b $COMM_RATE -D -U flash:w:$HOST_RUNTIME_NAME:i
-./firmware/load_host_firmware.sh
-./firmware/load_host_runtime.sh
-
 
 MASTER_LOADER_SCRIPT  = "./firmware/load_master.sh"
 AVRDUDE = "avrdude -p atmega2560 -c wiring -b 115200"
@@ -33,20 +32,23 @@ class FirmwarePusher(object):
         """
         self._port = port
         self._master_can_push = False
+        self._subproc_lock = threading.Lock()
 
 
-    @staticmethod
     def _run_subprocess(call):
         """
         Runs subprocesses for FirmwarePusher class and throws exceptions on failure.
+        Each subprocess call is locked by the same lock so a Firmware object can't
+        run multiple calls across multiple threads.
         @param call - call to run as a subprocess
         @raise FirmwarePusherException - if subprocess fails
         """
-        try:
-            with open(os.devnull, 'w') as FNULL:
-                subprocess.check_call(call, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            raise FirmwarePusherException(e)
+        with self._subproc_lock: # will unlock even if exception is raised in with block
+            try:
+                with open(os.devnull, 'w') as FNULL:
+                    subprocess.check_call(call, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                raise FirmwarePusherException(e)
 
 
     def _push_master_image(self, image_name):
@@ -105,9 +107,6 @@ class FirmwarePusher(object):
         """
         self._push_master_runtime() # can raise
         self._master_can_push = False
-
-
-
 
 
 class PressurePusher(FirmwarePusher):
