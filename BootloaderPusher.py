@@ -21,7 +21,7 @@ MASTER_IMAGE_ARG = "-Uflash:w:%s:"
 
 # Bootloader hex image location /names
 IMAGES_DIR = "./images"
-
+MASTER_BOOTLOADER = IMAGES_DIR + "master_bootloader.hex"
 SLAVE1_BOOTLOADER = IMAGES_DIR + "slave1_bootloader.hex"
 SLAVE2_BOOTLOADER = IMAGES_DIR + "slave2_bootloader.hex"
 SLAVE3_BOOTLOADER = IMAGES_DIR + "slave3_bootloader.hex"
@@ -32,15 +32,22 @@ GREEN     = '\033[92m'
 END_COLOR = '\033[0m'
 
 # Chip names
-ATMEGA_2560 = "atmega2560"
-ATMEGA_328P = "atmega328p"
+ATMEGA_2560 = "m2560"
+ATMEGA_328P = "m328p"
 
 
+class ChipName(Enum):
+    """Quick way to differentiate bootload targets"""
+    MCB_MASTER = 1
+    MCB_SLAVE1 = 2
+    MCB_SLAVE2 = 3
+    MCB_SLAVE3 = 4
 
-chips = { "mainboard_master" : { "type" : ATMEGA_2560, "is_master" : True},
-          "mainboard_slave1" : { "type" : ATMEGA_2560, "is_master" : False},
-          "mainboard_slave2" : { "type" : ATMEGA_2560, "is_master" : False},
-          "mainboard_slave3" : { "type" : ATMEGA_328P, "is_master" : False},
+
+chips = { ChipName.MCB_MASTER : { "part" : ATMEGA_2560, "image" : MASTER_BOOTLOADER, "is_master" : True},
+          ChipName.MCB_SLAVE1 : { "part" : ATMEGA_2560, "image" : SLAVE1_BOOTLOADER, "is_master" : False},
+          ChipName.MCB_SLAVE2 : { "part" : ATMEGA_2560, "image" : SLAVE2_BOOTLOADER, "is_master" : False},
+          ChipName.MCB_SLAVE3 : { "part" : ATMEGA_328P, "image" : SLAVE3_BOOTLOADER, "is_master" : False},
         }
 
 
@@ -61,7 +68,7 @@ class BootloaderPusher(object):
     def _run_subprocess(call):
     """
     Runs subprocesses for BootloaderPusher class and throws exceptions on failure.
-    Each subprocess call is locked by the same lock so a Firmware object can't
+    Each subprocess call is locked by the same lock so a Bootloader object can't
     run multiple calls across multiple threads.
     @param call - call to run as a subprocess
     @raise FirmwarePusherException - if subprocess fails
@@ -74,23 +81,63 @@ class BootloaderPusher(object):
             raise BootloaderPusherException(e)
 
 
-    def write_fuses(type):
+    def _write_fuses(self, part):
         """
         Writes fuses to connected chip
-        @param type - type of chip
+        @param part - type of chip
         @raise BootloaderPusherException - if fuse write fails
         """
-        fuses = FUSE_SET_2560 if type = ATMEGA_2560 else FUSE_SET_328
+        fuses = FUSE_SET_2560 if part = ATMEGA_2560 else FUSE_SET_328
         call = "%s %s" % (AVRDUDE, fuses)
         self._run_subprocess(call) # can raise
 
 
-    def bootload_slave(type, is_master):
+    def _write_bootloader(self, part, image, is_master):
         """
         Writes bootloader to connected chip
         @param type - type of chip
-        @param is_master - whether or not target is the master
+        @param image - whether or not target is the master
+        @raise BootloaderPusherException - if bootloader write fails
         """
+        part_arg = ATMEL_PART % part
+        image_arg_base = MASTER_IMAGE_ARG if is_master else SLAVE_IMAGE_ARG
+        image_arg = image_arg_base % image
+        args = " %s %s " % (part_arg, image_arg)
+        call = AVRDUDE + args
+        self._run_subprocess(call) #can raise
+
+
+    def _prepare_processor(self, chip):
+        """
+        Write fuses and bootloader to selected processor
+        @param which_processor - which on-board chip to write
+        @raise BootloaderPusherException - If unsupported chip or if preparation fails
+        """
+        if chip not in chips:
+            msg = "%s is not a valid processor" % which_processor
+            raise BootloaderPusherException(msg)
+        chip_info = chips[chip]
+        part      = chip_info['part']
+        image     = chip_info['image']
+        is_master = chip_info['is_master']
+        write_fuses(part) # can raise
+        write_bootloader(part, image, is_master) # can raise
+
+
+    def bootload_master(self):
+        self._prepare_processor(ChipName.MCB_MASTER)
+            
+
+    def bootload_slave1(self):
+        self._prepare_processor(ChipName.MCB_SLAVE1)
+
+
+    def bootload_slave2(self):
+        self._prepare_processor(ChipName.MCB_SLAVE2)
+
+
+    def bootload_slave3(self):
+        self._prepare_processor(ChipName.MCB_SLAVE3)
 
 
 
