@@ -1,4 +1,6 @@
+#! /usr/bin/python
 # TODO: File headers!
+
 
 import argparse
 from enum import Enum
@@ -18,10 +20,10 @@ FUSE_SET_2560 = "-e -Ulock:w:0x3F:m -Uefuse:w:0xFD:m -Uhfuse:w:0xD8:m -Ulfuse:w:
 FUSE_SET_328  = "-e -Ulock:w:0x3F:m -Uefuse:w:0x05:m -Uhfuse:w:0xd6:m -Ulfuse:w:0xff:m"
 ATMEL_PART = "-p %s"
 SLAVE_IMAGE_ARG = "-U %s"
-MASTER_IMAGE_ARG = "-Uflash:w:%s:"
+MASTER_IMAGE_ARG = "-Uflash:w:%s:i -Ulock:w:0x0F:m"
 
 # Bootloader hex image location /names
-IMAGES_DIR = "./images"
+IMAGES_DIR = "images/"
 MASTER_BOOTLOADER = IMAGES_DIR + "master_bootloader.hex"
 SLAVE1_BOOTLOADER = IMAGES_DIR + "slave1_bootloader.hex"
 SLAVE2_BOOTLOADER = IMAGES_DIR + "slave2_bootloader.hex"
@@ -86,10 +88,12 @@ class BootloaderPusher(object):
         """
         Writes fuses to connected chip
         @param part - type of chip
-        @raise BootloaderPusherException - if fuse write fails
+        @raise BootloaderPusherExcepdtion - if fuse write fails
         """
+        part_arg = ATMEL_PART % part
         fuses = FUSE_SET_2560 if part == ATMEGA_2560 else FUSE_SET_328
-        call = "%s %s" % (AVRDUDE, fuses)
+        args = " %s %s " % (part_arg, fuses)
+        call = AVRDUDE + args
         self._run_subprocess(call) # can raise
 
 
@@ -105,8 +109,10 @@ class BootloaderPusher(object):
         image_arg = image_arg_base % image
         args = " %s %s " % (part_arg, image_arg)
         call = AVRDUDE + args
-        self._run_subprocess(call) #can raise
-
+        self._run_subprocess(call) # can raise
+        #print
+        #print_ok(call)
+        #print
 
     def _prepare_processor(self, chip):
         """
@@ -168,10 +174,11 @@ def one_bootload(name, function):
         if response == quit_str:
             return False
         elif response != name:
-            print "%s is not a valid option"
+            print "%s is not a valid option" % response
             continue
 
-        try: 
+        try:
+            print "Setting fuses and applying bootloader to %s..." % name
             function()
         except BootloaderPusherException as e:
             print "Could not bootload %s: %s" % (name, str(e))
@@ -185,7 +192,7 @@ if __name__ == "__main__":
     if os.getuid() != 0:
         import __main__
         print_failure("Needs to run with super user priveledges!")
-        print "Please re-run as: sudo %s" % __main__.__file__
+        print "Please re-run as: sudo python %s" % __main__.__file__
         sys.exit(1)
 
     # Parse a provided port
@@ -215,7 +222,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
 
-    for name, function in loads:
+    for name, function in sorted(loads.items()):
         result = one_bootload(name, function)
         if not result:
             print "Could not complete %s" % name
