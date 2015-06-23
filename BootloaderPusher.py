@@ -1,5 +1,6 @@
 # TODO: File headers!
 
+import argparse
 from enum import Enum
 import os
 import sys
@@ -65,20 +66,20 @@ class BootloaderPusher(object):
         self._subproc_lock = threading.Lock()
 
 
-    def _run_subprocess(call):
-    """
-    Runs subprocesses for BootloaderPusher class and throws exceptions on failure.
-    Each subprocess call is locked by the same lock so a Bootloader object can't
-    run multiple calls across multiple threads.
-    @param call - call to run as a subprocess
-    @raise FirmwarePusherException - if subprocess fails
-    """
-    with self._subproc_lock: # will unlock even if exception is raised in with block
-        try:
-            with open(os.devnull, 'w') as FNULL:
-                subprocess.check_call(call, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            raise BootloaderPusherException(e)
+    def _run_subprocess(self, call):
+        """
+        Runs subprocesses for BootloaderPusher class and throws exceptions on failure.
+        Each subprocess call is locked by the same lock so a Bootloader object can't
+        run multiple calls across multiple threads.
+        @param call - call to run as a subprocess
+        @raise FirmwarePusherException - if subprocess fails
+        """
+        with self._subproc_lock: # will unlock even if exception is raised in with block
+            try:
+                with open(os.devnull, 'w') as FNULL:
+                    subprocess.check_call(call, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                raise BootloaderPusherException(e)
 
 
     def _write_fuses(self, part):
@@ -87,7 +88,7 @@ class BootloaderPusher(object):
         @param part - type of chip
         @raise BootloaderPusherException - if fuse write fails
         """
-        fuses = FUSE_SET_2560 if part = ATMEGA_2560 else FUSE_SET_328
+        fuses = FUSE_SET_2560 if part == ATMEGA_2560 else FUSE_SET_328
         call = "%s %s" % (AVRDUDE, fuses)
         self._run_subprocess(call) # can raise
 
@@ -114,14 +115,14 @@ class BootloaderPusher(object):
         @raise BootloaderPusherException - If unsupported chip or if preparation fails
         """
         if chip not in chips:
-            msg = "%s is not a valid processor" % which_processor
+            msg = "%s is not a valid processor" % chip
             raise BootloaderPusherException(msg)
         chip_info = chips[chip]
         part      = chip_info['part']
         image     = chip_info['image']
         is_master = chip_info['is_master']
-        write_fuses(part) # can raise
-        write_bootloader(part, image, is_master) # can raise
+        self._write_fuses(part) # can raise
+        self._write_bootloader(part, image, is_master) # can raise
 
 
     def bootload_master(self):
@@ -151,6 +152,34 @@ def print_failure(msg):
     print RED + msg + END_COLOR
 
 
+def one_bootload(name, function):
+    """
+    Helper function to the console based bootloader pusher utility.
+    @param name - name of device to target
+    @param function - function to write fuses and bootloader to device
+    """
+    quit_str = 'quit'
+    request = "Type '%s' when ready to proceed (or quit to %s up): " % (name, quit_str)
+
+    while(1):
+        print "Please attach programmer tool to %s" % name
+        response = raw_input(request)
+
+        if response == quit_str:
+            return False
+        elif response != name:
+            print "%s is not a valid option"
+            continue
+
+        try: 
+            function()
+        except BootloaderPusherException as e:
+            print "Could not bootload %s: %s" % (name, str(e))
+            continue
+        break
+    return True
+
+
 if __name__ == "__main__":
     # Check for super user priveledges
     if os.getuid() != 0:
@@ -159,4 +188,37 @@ if __name__ == "__main__":
         print "Please re-run as: sudo %s" % __main__.__file__
         sys.exit(1)
 
+    # Parse a provided port
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--device", help="Device to bootload", default=None)
+    args = parser.parse_args()
+    device = args.device
 
+    b_push = BootloaderPusher()
+    loads = { "master" : b_push.bootload_master,
+              "slave1" : b_push.bootload_slave1,
+              "slave2" : b_push.bootload_slave2,
+              "slave3" : b_push.bootload_slave3,
+            }
+
+    if device != None:
+        if device not in loads:
+            print "%s is not a valid target for bootloading!" % device
+            print "Please use one of these:"
+            print loads.keys()
+            sys.exit(1)
+        result = one_bootload(device, loads[device])
+        if not result:
+            print "Could not complete %s" % device
+            sys.exit(1)
+        print "Bootloaded %s successfully" % device
+        sys.exit(0)
+
+
+    for name, function in loads:
+        result = one_bootload(name, function)
+        if not result:
+            print "Could not complete %s" % name
+            sys.exit(1)
+    print "Bootloaded all successfully"
+    sys.exit(0)
