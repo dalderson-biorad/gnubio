@@ -2,9 +2,8 @@
 
 
 import abc # For abstract classes
-import os
-import subprocess
-import threading
+from SubprocessRunner import SubprocessRunner
+from SubprocessRunner import SubprocessException
 
 #python2 gbihexup/src/gbihexup.py --v --port=/dev/ttyS0 --baud=115200 --target=4 --file=images/slave3.hex
 #avrdude -C avrdude.conf -v -v -v -p $ATMEL_PART -c wiring -P $COMM_PORT -b $COMM_RATE -D -U flash:w:$HOST_RUNTIME_NAME:i
@@ -21,7 +20,7 @@ class FirmwarePusherException(Exception):
     pass
 
 
-class FirmwarePusher(object):
+class FirmwarePusher(SubprocessRunner ):
     """An abstract class for pushing firmware over I2C through a master"""
     __metaclass__ = abc.ABCMeta
 
@@ -30,25 +29,9 @@ class FirmwarePusher(object):
         Initializer.
         @param port - serial port connected to arduino master
         """
+        super(FirmwarePusher, self).__init__()
         self._port = port
         self._master_can_push = False
-        self._subproc_lock = threading.Lock()
-
-
-    def _run_subprocess(call):
-        """
-        Runs subprocesses for FirmwarePusher class and throws exceptions on failure.
-        Each subprocess call is locked by the same lock so a Firmware object can't
-        run multiple calls across multiple threads.
-        @param call - call to run as a subprocess
-        @raise FirmwarePusherException - if subprocess fails
-        """
-        with self._subproc_lock: # will unlock even if exception is raised in with block
-            try:
-                with open(os.devnull, 'w') as FNULL:
-                    subprocess.check_call(call, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as e:
-                raise FirmwarePusherException(e)
 
 
     def _push_master_image(self, image_name):
@@ -61,7 +44,10 @@ class FirmwarePusher(object):
         port_arg  = AVRDUDE_PORT % self._port
         args = " %s %s" % (image_arg, port_arg)
         call = AVRDUDE + args
-        FirmwarePusher._run_subprocess(call) # can raise
+        try:
+            self._run_subprocess(call)
+        except SubprocessException as e:
+            raise FirmwarePusherException(e)
 
 
     def _push_slave_image(self, image_name, i2c_addr):
@@ -79,7 +65,10 @@ class FirmwarePusher(object):
         port_arg = "--port=%s" % self._port
         args = " %s %s %s " % (port_arg, i2c_arg, image_arg)
         call = SLAVE_PUSHER + args
-        FirmwarePusher._run_subprocess(call) # can raise
+        try:
+            self._run_subprocess(call)
+        except SubprocessException as e:
+            raise FirmwarePusherException(e)
 
 
     def set_master_as_pusher(self):

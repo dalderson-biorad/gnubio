@@ -59,29 +59,8 @@ class BootloaderPusherException(Exception):
     pass
 
 
-class BootloaderPusher(object):
+class BootloaderPusher(SubprocessRunner):
     """A class for applying bootloaders to on-board arduinos"""
-
-
-    def __init__(self):
-        """TODO"""
-        self._subproc_lock = threading.Lock()
-
-
-    def _run_subprocess(self, call):
-        """
-        Runs subprocesses for BootloaderPusher class and throws exceptions on failure.
-        Each subprocess call is locked by the same lock so a Bootloader object can't
-        run multiple calls across multiple threads.
-        @param call - call to run as a subprocess
-        @raise FirmwarePusherException - if subprocess fails
-        """
-        with self._subproc_lock: # will unlock even if exception is raised in with block
-            try:
-                with open(os.devnull, 'w') as FNULL:
-                    subprocess.check_call(call, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as e:
-                raise BootloaderPusherException(e)
 
 
     def _write_fuses(self, part):
@@ -94,7 +73,10 @@ class BootloaderPusher(object):
         fuses = FUSE_SET_2560 if part == ATMEGA_2560 else FUSE_SET_328
         args = " %s %s " % (part_arg, fuses)
         call = AVRDUDE + args
-        self._run_subprocess(call) # can raise
+        try:
+            self._run_subprocess(call)
+        except SubprocessException as e:
+            raise BootloaderPusherException(e)
 
 
     def _write_bootloader(self, part, image, is_master):
@@ -109,10 +91,11 @@ class BootloaderPusher(object):
         image_arg = image_arg_base % image
         args = " %s %s " % (part_arg, image_arg)
         call = AVRDUDE + args
-        self._run_subprocess(call) # can raise
-        #print
-        #print_ok(call)
-        #print
+        try:
+            self._run_subprocess(call)
+        except SubprocessException as e:
+            raise BootloaderPusherException(e)
+
 
     def _prepare_processor(self, chip):
         """
@@ -132,20 +115,35 @@ class BootloaderPusher(object):
 
 
     def bootload_master(self):
+        """
+        Write fuses and bootloader to mainboard master.
+        @raise BootloaderPusherException - if fuse / bootload prep fails
+        """
         self._prepare_processor(ChipName.MCB_MASTER)
             
 
     def bootload_slave1(self):
+        """
+        Write fuses and bootloader to mainboard master.
+        @raise BootloaderPusherException - if fuse / bootload prep fails
+        """
         self._prepare_processor(ChipName.MCB_SLAVE1)
 
 
     def bootload_slave2(self):
+        """
+        Write fuses and bootloader to mainboard master.
+        @raise BootloaderPusherException - if fuse / bootload prep fails
+        """
         self._prepare_processor(ChipName.MCB_SLAVE2)
 
 
     def bootload_slave3(self):
+        """
+        Write fuses and bootloader to mainboard master.
+        @raise BootloaderPusherException - if fuse / bootload prep fails
+        """
         self._prepare_processor(ChipName.MCB_SLAVE3)
-
 
 
 def print_ok(msg):
@@ -218,7 +216,7 @@ if __name__ == "__main__":
         if not result:
             print "Could not complete %s" % device
             sys.exit(1)
-        print "Bootloaded %s successfully" % device
+        print_ok("Bootloaded %s successfully" % device)
         sys.exit(0)
 
 
@@ -227,5 +225,5 @@ if __name__ == "__main__":
         if not result:
             print "Could not complete %s" % name
             sys.exit(1)
-    print "Bootloaded all successfully"
+    print_ok("Bootloaded all successfully")
     sys.exit(0)
