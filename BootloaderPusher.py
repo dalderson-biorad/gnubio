@@ -204,11 +204,12 @@ if __name__ == "__main__":
     # Parse a provided port
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--device", help="Device to bootload", default=None)
-    parser.add_argument("-i", "--use_ice", help="Use atmel ice programmer", default=False)
+    parser.add_argument("-i", "--use_ice", action='store_true', help="Use atmel ice programmer", default=False)
     args = parser.parse_args()
     device = args.device
+    use_ice = args.use_ice
 
-    b_push = BootloaderPusher()
+    b_push = BootloaderPusher(use_ice)
     loads = { "master" : b_push.bootload_master,
               "slave1" : b_push.bootload_slave1,
               "slave2" : b_push.bootload_slave2,
