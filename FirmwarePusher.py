@@ -20,7 +20,7 @@ class FirmwarePusherException(Exception):
     pass
 
 
-class FirmwarePusher(SubprocessRunner ):
+class FirmwarePusher(SubprocessRunner):
     """An abstract class for pushing firmware over I2C through a master"""
     __metaclass__ = abc.ABCMeta
 

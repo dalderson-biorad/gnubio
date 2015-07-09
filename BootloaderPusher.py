@@ -202,9 +202,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Parse a provided port
+    device_help = "Device to bootload"
+    ice_help = "Use atmel ice programmer (not fully supported yet...)"
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--device", help="Device to bootload", default=None)
-    parser.add_argument("-i", "--use_ice", action='store_true', help="Use atmel ice programmer", default=False)
+    parser.add_argument("-d", "--device", help=device_help, default=None)
+    parser.add_argument("-i", "--use_ice", action='store_true', help=ice_help, default=False)
     args = parser.parse_args()
     device = args.device
     use_ice = args.use_ice
@@ -228,7 +230,6 @@ if __name__ == "__main__":
             sys.exit(1)
         print_ok("Bootloaded %s successfully" % device)
         sys.exit(0)
-
 
     for name, function in sorted(loads.items()):
         result = one_bootload(name, function)
