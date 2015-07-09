@@ -6,8 +6,7 @@ import argparse
 from enum import Enum
 import os
 import sys
-import subprocess
-import threading
+from SubprocessRunner import SubprocessRunner, SubprocessException
 
 #sudo avrdude -p m328p -c avrispmkII -P usb -U bootloaders/atmega328_twi/obj/twi_atmega328p_S4.hex 
 #sudo avrdude -p m2560 -c avrispmkII -P usb -U atmega2560_twi/obj/twi_atmega2560_S3.hex
@@ -196,6 +195,7 @@ if __name__ == "__main__":
     # Parse a provided port
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--device", help="Device to bootload", default=None)
+    #parser.add_argument("-i", "--use_ice", help="Use atmel ice programmer", default=False)
     args = parser.parse_args()
     device = args.device
 
