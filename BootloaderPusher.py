@@ -61,6 +61,15 @@ class BootloaderPusherException(Exception):
 class BootloaderPusher(SubprocessRunner):
     """A class for applying bootloaders to on-board arduinos"""
 
+    def __init__(self, use_ice=False):
+        """
+        Initializer.
+        @param use_ice - use Atmel ice (white rectangle) AVR programmer.
+        """
+        #TODO - make sudo checking done in init
+        super(BootloaderPusher, self).__init__()
+        self._avrdude_cmd = AVRDUDE_ICE if use_ice else AVRDUDE
+
 
     def _write_fuses(self, part):
         """
@@ -71,7 +80,7 @@ class BootloaderPusher(SubprocessRunner):
         part_arg = ATMEL_PART % part
         fuses = FUSE_SET_2560 if part == ATMEGA_2560 else FUSE_SET_328
         args = " %s %s " % (part_arg, fuses)
-        call = AVRDUDE + args
+        call = self._avrdude_cmd + args
         try:
             self._run_subprocess(call)
         except SubprocessException as e:
@@ -89,7 +98,7 @@ class BootloaderPusher(SubprocessRunner):
         image_arg_base = MASTER_IMAGE_ARG if is_master else SLAVE_IMAGE_ARG
         image_arg = image_arg_base % image
         args = " %s %s " % (part_arg, image_arg)
-        call = AVRDUDE + args
+        call = self._avrdude_cmd + args
         try:
             self._run_subprocess(call)
         except SubprocessException as e:
@@ -119,7 +128,7 @@ class BootloaderPusher(SubprocessRunner):
         @raise BootloaderPusherException - if fuse / bootload prep fails
         """
         self._prepare_processor(ChipName.MCB_MASTER)
-            
+
 
     def bootload_slave1(self):
         """
@@ -195,7 +204,7 @@ if __name__ == "__main__":
     # Parse a provided port
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--device", help="Device to bootload", default=None)
-    #parser.add_argument("-i", "--use_ice", help="Use atmel ice programmer", default=False)
+    parser.add_argument("-i", "--use_ice", help="Use atmel ice programmer", default=False)
     args = parser.parse_args()
     device = args.device
 
