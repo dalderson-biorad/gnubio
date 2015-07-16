@@ -14,12 +14,12 @@ from SubprocessRunner import SubprocessRunner, SubprocessException
 
 # avrdude cmd line call and arguments
 AVRDUDE = "avrdude -c avrispmkII -P usb"
-AVRDUDE_ICE = "/usr/local/bin/avrdude -c atmelice_isp -P usb"
+AVRDUDE_ICE = "avrdude -c atmelice_isp -P usb"
 FUSE_SET_2560 = "-e -Ulock:w:0x3F:m -Uefuse:w:0xFD:m -Uhfuse:w:0xD8:m -Ulfuse:w:0xFF:m"
 FUSE_SET_328  = "-e -Ulock:w:0x3F:m -Uefuse:w:0x05:m -Uhfuse:w:0xd6:m -Ulfuse:w:0xff:m"
 ATMEL_PART = "-p %s"
 SLAVE_IMAGE_ARG = "-U %s"
-MASTER_IMAGE_ARG = "-Uflash:w:%s:i -Ulock:w:0x0F:m"
+MASTER_IMAGE_ARG = SLAVE_IMAGE_ARG #"-Uflash:w:%s:i -Ulock:w:0x0F:m"
 
 # Bootloader hex image location /names
 IMAGES_DIR = "images/"
@@ -118,7 +118,7 @@ class BootloaderPusher(SubprocessRunner):
         part      = chip_info['part']
         image     = chip_info['image']
         is_master = chip_info['is_master']
-        self._write_fuses(part) # can raise
+        #self._write_fuses(part) # can raise
         self._write_bootloader(part, image, is_master) # can raise
 
 
@@ -171,7 +171,7 @@ def one_bootload(name, function):
     @param function - function to write fuses and bootloader to device
     """
     quit_str = 'quit'
-    request = "Type '%s' when ready to proceed (or quit to %s up): " % (name, quit_str)
+    request = "Type '%s' when ready to proceed (or %s to give up): " % (name, quit_str)
 
     while(1):
         print "Please attach programmer tool to %s" % name
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     for name, function in sorted(loads.items()):
         result = one_bootload(name, function)
         if not result:
-            print "Could not complete %s" % name
+            print_failure("Could not complete %s" % name)
             sys.exit(1)
     print_ok("Bootloaded all successfully")
     sys.exit(0)
