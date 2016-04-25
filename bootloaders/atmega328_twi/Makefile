@@ -11,8 +11,8 @@
 #
 # Set a path to the AVR gnu compiler
 #
-TOOLPATH=$(HOME)/bin/avr8-gnu-toolchain/bin
-ISPPATH=$(HOME)/bin/AVR/bin
+TOOLPATH=/usr/bin
+ISPPATH=/usr/bin
 
 #
 # Set the output module name
