@@ -16,7 +16,8 @@ fi
 
 for slave in `seq 0 17`
 do
-    make SLAVE_ID=$slave TOOLPATH=$USR_TOOLPATH ISPPATH=$USR_ISPPATH
+    ic2_addr=$(($slave+1)) # i2c_addr is always 1 higher than slave number
+    make SLAVE_ID=$ic2_addr TOOLPATH=$USR_TOOLPATH ISPPATH=$USR_ISPPATH
     mv obj/${BUILDNAME/X/$slave} ../$PRESSDIR/${PRESSNAME/X/$slave}
 done
 
